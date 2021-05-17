@@ -47,7 +47,7 @@
       with_items: '{{ec2.instances}}'
 
     - name: Accept new ssh fingerprints
-      shell: sudo touch ~/.ssh/known_hosts; sudo chmod 777 ~/.ssh/known_hosts 
+      shell: touch ~/.ssh/known_hosts; chmod 777 ~/.ssh/known_hosts 
 
     - name: Wait for SSH connection
       wait_for: host={{ item.public_dns_name }} port=22 delay=30 timeout=300 state=started
