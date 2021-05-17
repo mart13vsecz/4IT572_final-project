@@ -1,6 +1,9 @@
 vse: &vse
   docker:
     - image: mart13vsecz/devops:latest
+      auth:
+        username: mart13vsecz  # can specify string literal values
+        password: $DOCKERHUB_PASSWORD  # or project environment variable reference
 
 version: 2.1
 jobs:
