@@ -1,0 +1,86 @@
+- name: Deploy to EC2
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Terminate Instances
+        ec2_instance_facts:
+          region: us-east-1
+          aws_access_key: "{{aws_access_key_id}}"
+          aws_secret_key: "{{aws_secret_access_key}}"
+          security_token: "{{aws_session_token}}"
+        register: ec2_info
+
+    - name: Displaying output
+      debug: msg="{{item.instance_id}}"
+      with_items: "{{ec2_info.instances}}"
+
+    - name: Terminate
+      ec2:
+        instance_ids: "{{item.instance_id}}"
+        region: us-east-1
+        state: absent
+        aws_access_key: "{{aws_access_key_id}}"
+        aws_secret_key: "{{aws_secret_access_key}}"
+        security_token: "{{aws_session_token}}"
+        wait: yes
+      with_items: "{{ec2_info.instances}}"
+
+    - name: Launch EC2 instance
+      ec2:
+        instance_type: t2.micro
+        image: ami-013f17f36f8b1fefb
+        region: us-east-1
+        key_name: devops-mart13
+        vpc_subnet_id: subnet-69537e67
+        assign_public_ip: yes
+        wait: yes
+        count: 1
+        group: eshop
+        aws_access_key: "{{aws_access_key_id}}"
+        aws_secret_key: "{{aws_secret_access_key}}"
+        security_token: "{{aws_session_token}}"
+      register: ec2
+
+    - name: Add instance host to group
+      add_host: hostname={{ item.public_dns_name }} groupname=launched
+      with_items: '{{ec2.instances}}'
+
+#    - name: Accept new ssh fingerprints
+#          shell: ssh-keyscan -H {{ item.public_ip }} >> ~/.ssh/known_hosts
+#          with_items: '{{ ec2.instances }}'
+
+    - name: Wait for SSH connection
+      wait_for: host={{ item.public_dns_name }} port=22 delay=30 timeout=300 state=started
+      with_items: '{{ec2.instances}}'
+
+- name: Configure EC2
+  hosts: launched
+  connection: ssh
+
+  tasks:
+    - name: Install docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      become: yes
+    - service:
+        name: docker
+        state: started
+        enabled: yes
+      become: yes
+    - name: Get project files from git
+      git:
+        repo: 'https://github.com/mart13vsecz/4IT572_final-project.git'
+        dest: ./app
+    - name: Build docker with eshop
+      shell: cd app && docker build -t myeshop:latest .
+      become: yes
+    - name: Run docker with eshop
+      shell: docker run -p 80:3000 myeshop
+      async: 45
+      poll: 0
+      become: yes
+    - wait_for:
+        timeout: 666
+        port: 80
