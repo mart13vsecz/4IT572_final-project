@@ -10,7 +10,7 @@
           security_token: "{{aws_session_token}}"
         register: ec2_info
 
-    - name: Displaying output
+    - name: Displaying debug output
       debug: msg="{{item.instance_id}}"
       with_items: "{{ec2_info.instances}}"
 
