@@ -18,10 +18,15 @@ jobs:
   deploy:
     <<: *vse
     steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "66:c6:4f:cc:ba:79:a8:ce:6d:53:1e:ed:5b:65:89:4c:6a:94:c1:89"
       - attach_workspace:
-         at: .
+          at: .
+      - run: chmod 777 get_pass.sh
       - run:
-         command: ./node_modules/.bin/firebase deploy --token=$FIREBASE_TOKEN
+          command: ansible-playbook -vvv ansible/ec2_deploy.yml --vault-password-file get_pass.sh --user ubuntu
 
 workflows:
   version: 2.1
